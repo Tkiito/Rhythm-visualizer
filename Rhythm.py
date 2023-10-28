@@ -1,43 +1,30 @@
-import os
-import threading
-import time
-import pygame
-from pygame.locals import *
-
-# Pygameの初期化
-pygame.init()
-
-# ウィンドウの幅と高さ
-window_width = 400
-window_height = 200
-
-# ウィンドウの作成
-window = pygame.display.set_mode((window_width, window_height))
+import tkinter as tk
+import threading, os, time, pygame
 
 # メトロノームの初期設定
 bpm = 60
 count = 1
 max_count = 4
-background_color = (255, 0, 0)  # 赤色 (R, G, B)
+background_color = "red"  # 背景色を初期化
+background2 = "lightblue"
 reset_pressed = False
 running = False
 thread = None
 hihat = False
-
-# 音声ファイルの読み込み
-current_path = os.getcwd()
-Soundtakt = pygame.mixer.Sound(
-    os.path.join(current_path, "Rhythm visualizer/Sounds/Takt.wav")
-)
-Soundtin = pygame.mixer.Sound(
-    os.path.join(current_path, "Rhythm visualizer/Sounds/Tin.wav")
-)
-Soundhihat = pygame.mixer.Sound(
-    os.path.join(current_path, "Rhythm visualizer/Sounds/Hihat.wav")
-)
-
-# Pygameのクロック
-clock = pygame.time.Clock()
+currentpath = os.getcwd()
+pygame.init()
+pygame.mixer.init()
+# Rhythm visualizerはアップロード前に消す
+# Takt
+Soundtakt = pygame.mixer.Sound(currentpath + "\Rhythm visualizer\Sounds\Takt.wav")
+# Tin
+Soundtin = pygame.mixer.Sound(currentpath + "\Rhythm visualizer\Sounds\Tin.wav")
+# Hihat
+Soundhihat = pygame.mixer.Sound(currentpath + "\Rhythm visualizer\Sounds\Hihat.wav")
+# Kickdrum
+Soundkick = pygame.mixer.Sound(currentpath + "\Rhythm visualizer\Sounds\Bassdrum.wav")
+# Snaredrum
+Soundsnare = pygame.mixer.Sound(currentpath + "\Rhythm visualizer\Sounds\Snaredrum.wav")
 
 
 def start_metronome():
@@ -52,10 +39,7 @@ def start_metronome():
         if count == max_count:
             count = 1
             change_background_color()
-    label_text = font.render(str(count), True, (255, 255, 255))
-    label_rect = label_text.get_rect(center=(window_width - 50, window_height // 2))
-    window.blit(label_text, label_rect)
-    pygame.display.flip()
+    label.config(text=str(count))
     global thread
     if thread is None or not thread.is_alive():
         thread = threading.Thread(target=metronome_thread)
@@ -64,7 +48,10 @@ def start_metronome():
 
 def hihat_switch():
     global hihat
-    hihat = not hihat
+    if button_hihat.get():
+        hihat = True
+    else:
+        hihat = False
 
 
 def reset_metronome():
@@ -73,9 +60,7 @@ def reset_metronome():
     reset_pressed = True
     running = False
     count = 1
-    label_text = font.render(str(count), True, (255, 255, 255))
-    label_rect = label_text.get_rect(center=(window_width - 50, window_height // 2))
-    window.blit(label_text, label_rect)
+    label.config(text=str(count))
 
 
 def change_count():
@@ -94,73 +79,77 @@ def metronome_thread():
         count += 1
         if count > max_count:
             count = 1
-            change_background_color()
-        label_text = font.render(str(count), True, (255, 255, 255))
-        label_rect = label_text.get_rect(center=(window_width - 50, window_height // 2))
-        window.blit(label_text, label_rect)
+            change_background_color()  # 背景色を変更
+        label.config(text=str(count))
         if count == 1:
             Soundtin.play()
         else:
             Soundtakt.play()
-        if hihat:
+        if hihat == True:
             Soundhihat.play()
         time.sleep(60 / bpm / 2)
-        if hihat:
+        if hihat == True:
             Soundhihat.play()
         time.sleep(60 / bpm / 2)
-        pygame.display.flip()
 
 
 def change_background_color():
     global background_color
-    if background_color == (255, 0, 0):
-        background_color = (0, 255, 0)  # 緑色 (R, G, B)
+    if background_color == "red":
+        background_color = "green"
     else:
-        background_color = (255, 0, 0)  # 赤色 (R, G, B)
-    window.fill(background_color)
-    pygame.display.flip()
+        background_color = "red"
+    right_frame.config(bg=background_color)
+    label.config(bg=background_color)
 
 
-# フォントとテキスト
-font = pygame.font.Font(None, 36)
-label_text = font.render(str(count), True, (255, 255, 255))
-label_rect = label_text.get_rect(center=(window_width - 50, window_height // 2))
-window.blit(label_text, label_rect)
+# GUIウィンドウの作成
+root = tk.Tk()
+root.title("Metronome")
+root.geometry("400x200")
 
-# メトロノームの表示用ラベル
-label = pygame.font.Font(None, 36).render(str(count), True, (255, 255, 255))
-label_rect = label.get_rect(center=(window_width - 50, window_height // 2))
-window.blit(label, label_rect)
+# 左側のフレーム
+left_frame = tk.Frame(root, width=200, height=200, bg=background2)
+left_frame.pack(side="left", fill="both", expand=True)
+
+# 右側のフレーム（半透明の赤色の背景）
+right_frame = tk.Frame(root, bg=background_color, width=120, height=200)
+right_frame.pack(side="right", fill="both", expand=True)
+
+# StartボタンとResetボタン
+start_button = tk.Button(left_frame, text="Start", command=start_metronome)
+reset_button = tk.Button(left_frame, text="Reset", command=reset_metronome)
+start_button.place(x=20, y=150)
+reset_button.place(x=120, y=150)
+
+# Countの入力フィールドとボタン
+count_label = tk.Label(left_frame, text="Max Count:", bg=background2)
+count_label.place(x=20, y=30)
+count_entry = tk.Entry(left_frame, width=5, bg=background2)
+count_entry.place(x=120, y=30)
+count_entry.insert(0, str(max_count))
+update_count_button = tk.Button(left_frame, text="Update", command=change_count)
+update_count_button.place(x=160, y=25)
+
+# BPMの入力フィールドとボタン
+bpm_label = tk.Label(left_frame, text="BPM:", bg=background2)
+bpm_label.place(x=20, y=80)
+bpm_entry = tk.Entry(left_frame, width=5, bg=background2)
+bpm_entry.place(x=120, y=80)
+bpm_entry.insert(0, str(bpm))
+update_bpm_button = tk.Button(left_frame, text="Update", command=change_bpm)
+update_bpm_button.place(x=160, y=75)
 
 # ハイハットのトグルスイッチ
-hihat_button = pygame.Rect(20, 110, 50, 30)
+button_hihat = tk.BooleanVar()
+button_hihat.set(False)
+switch_hihat = tk.Checkbutton(
+    root, text="Hihat", variable=button_hihat, command=hihat_switch, bg=background2
+)
+switch_hihat.place(x=20, y=110)
 
-# Countの入力欄
-count_entry = pygame.Rect(120, 30, 50, 30)
+# メトロノームの表示用ラベル
+label = tk.Label(root, text=str(count), font=("Helvetica", 48), fg="white", bg="red")
+label.place(x=300, y=60)
 
-# BPMの入力欄
-bpm_entry = pygame.Rect(120, 80, 50, 30)
-
-# メインループ
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            running = False
-        elif event.type == MOUSEBUTTONDOWN:
-            if hihat_button.collidepoint(event.pos):
-                hihat_switch()
-        elif event.type == KEYDOWN:
-            if event.key == K_s:
-                start_metronome()
-            elif event.key == K_r:
-                reset_metronome()
-            elif event.key == K_UP:
-                change_count()
-            elif event.key == K_DOWN:
-                change_bpm()
-
-    clock.tick(bpm)
-    pygame.display.flip()
-
-pygame.quit()
+root.mainloop()
